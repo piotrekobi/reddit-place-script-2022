@@ -13,6 +13,9 @@ from PIL import ImageColor
 from PIL import Image
 import random
 
+board_width = 1000
+board_height = 500
+
 # set verbose mode to increase output (messy)
 verbose_mode = False
 
@@ -119,9 +122,9 @@ def closest_color(target_rgb, rgb_colors_array_in):
 
 # method to draw a pixel at an x, y coordinate in r/place with a specific color
 def set_pixel_and_check_ratelimit(
-    access_token_in, x, y, color_index_in=18, canvas_index=0
+    access_token_in, x, y, color_index_in=18, canvas_index=1
 ):
-    print("placing " + color_id_to_name(color_index_in) + " pixel at " + str((x, y)))
+    print("placing " + color_id_to_name(color_index_in) + " pixel at " + str((x + board_width, y)))
 
     url = "https://gql-realtime-2.reddit.com/query"
 
@@ -228,7 +231,7 @@ def get_board(access_token_in):
                             "channel": {
                                 "teamOwner": "AFD2022",
                                 "category": "CANVAS",
-                                "tag": "0",
+                                "tag": "1",
                             }
                         }
                     },
@@ -277,14 +280,20 @@ def get_unset_pixel(boardimg, x, y):
             y = 0
             num_loops += 1
         if verbose_mode:
-            print(x + pixel_x_start, y + pixel_y_start)
             print(x, y, "boardimg", image_width, image_height)
         target_rgb = pix[x, y]
         new_rgb = closest_color(target_rgb, rgb_colors_array)
-        if pix2[x + pixel_x_start, y + pixel_y_start] != new_rgb:
+        if (
+            pix2[x + pixel_x_start - board_width, y + pixel_y_start - board_height]
+            != new_rgb
+        ):
+           
             if verbose_mode:
                 print(
-                    pix2[x + pixel_x_start, y + pixel_y_start],
+                    pix2[
+                        x + pixel_x_start - board_width,
+                        y + pixel_y_start - board_height,
+                    ],
                     new_rgb,
                     new_rgb != (69, 42, 0),
                     pix2[x, y] != new_rgb,
@@ -293,10 +302,13 @@ def get_unset_pixel(boardimg, x, y):
                 if verbose_mode:
                     print(
                         "Different Pixel found at:",
-                        x + pixel_x_start,
-                        y + pixel_y_start,
+                        x + pixel_x_start - board_width,
+                        y + pixel_y_start - board_height,
                         "With Color:",
-                        pix2[x + pixel_x_start, y + pixel_y_start],
+                        pix2[
+                            x + pixel_x_start - board_width,
+                            y + pixel_y_start - board_height,
+                        ],
                         "Replacing with:",
                         new_rgb,
                     )
@@ -324,7 +336,7 @@ def load_image():
     global image_width
     global image_height
     # read and load the image to draw and get its dimensions
-    image_path = os.path.join(os.path.abspath(os.getcwd()), "image.jpg")
+    image_path = os.path.join(os.path.abspath(os.getcwd()), "weiti1.png")
     im = Image.open(image_path)
     pix = im.load()
     print(
@@ -346,10 +358,10 @@ def task(credentials_index):
         # note: reddit limits us to place 1 pixel every 5 minutes, so I am setting it to
         # 5 minutes and 30 seconds per pixel
         # pixel_place_frequency = 330
-        pixel_place_frequency = 330
+        pixel_place_frequency = 0
 
         # pixel drawing preferences
-        pixel_x_start = int(os.getenv("ENV_DRAW_X_START"))
+        pixel_x_start = int(os.getenv("ENV_DRAW_X_START")) - board_width
         pixel_y_start = int(os.getenv("ENV_DRAW_Y_START"))
 
         try:
@@ -506,7 +518,6 @@ def task(credentials_index):
                     pixel_y_start + current_c,
                     pixel_color_index,
                 )
-
                 current_r += 1
 
                 # go back to first column when reached end of a row while drawing
